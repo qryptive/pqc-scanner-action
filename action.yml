@@ -1,0 +1,60 @@
+name: 'PQC Vulnerability Scanner'
+description: 'Detect quantum-vulnerable cryptography (RSA, ECDSA, ECDH, DES, SHA-1, etc.). Scanner runs in your runner — code stays in your environment.'
+author: 'Qryptive'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  paths:
+    description: 'Glob patterns to scan (space-separated). Default: Python, Java, and Go source.'
+    default: '**/*.py **/*.java **/*.go'
+    required: false
+  fail_on_vulnerable:
+    description: 'Fail the build if vulnerable algorithms are found'
+    default: 'true'
+    required: false
+  severity_threshold:
+    description: 'Minimum severity to report: critical, high, medium, low'
+    default: 'medium'
+    required: false
+  pqc_api_key:
+    description: 'API key for AI disambiguation + dashboard (paid). When set, finding metadata is sent to qryptive.ai for false-positive reduction. Source code is never uploaded.'
+    required: false
+  migration_mode:
+    description: 'Migration strategy: pqc_only (default), staged_rollout, pqc_preferred, hybrid'
+    default: 'pqc_only'
+    required: false
+  report_format:
+    description: 'Output format: annotations (default), sarif, json'
+    default: 'annotations'
+    required: false
+  scan_scope:
+    description: 'Files to scan: changed (only files in this push/PR, default) or all (entire repo)'
+    default: 'changed'
+    required: false
+  scan_id:
+    description: 'Platform scan ID to link the fix PR back to (set automatically when triggered by platform)'
+    required: false
+  platform_url:
+    description: 'Override the platform API base URL (default: https://api.qryptive.ai). Useful for testing.'
+    required: false
+  github_token:
+    description: 'GitHub token used to create fix PRs. Pass secrets.GITHUB_TOKEN. Required only for the paid auto-fix tier.'
+    required: false
+
+runs:
+  using: 'docker'
+  image: 'docker://ghcr.io/qryptive/pqc-scanner:v1'
+  env:
+    INPUT_PATHS: ${{ inputs.paths }}
+    INPUT_FAIL_ON_VULNERABLE: ${{ inputs.fail_on_vulnerable }}
+    INPUT_SEVERITY_THRESHOLD: ${{ inputs.severity_threshold }}
+    INPUT_PQC_API_KEY: ${{ inputs.pqc_api_key }}
+    INPUT_MIGRATION_MODE: ${{ inputs.migration_mode }}
+    INPUT_REPORT_FORMAT: ${{ inputs.report_format }}
+    INPUT_SCAN_SCOPE: ${{ inputs.scan_scope }}
+    INPUT_SCAN_ID: ${{ inputs.scan_id }}
+    PQC_PLATFORM_URL: ${{ inputs.platform_url }}
+    PQC_GITHUB_TOKEN: ${{ inputs.github_token }}
