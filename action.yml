@@ -8,8 +8,8 @@ branding:
 
 inputs:
   paths:
-    description: 'Glob patterns to scan (space-separated). Default: Python, Java, and Go source.'
-    default: '**/*.py **/*.java **/*.go'
+    description: 'Glob patterns to scan (space-separated)'
+    default: '**/*.py **/*.java'
     required: false
   fail_on_vulnerable:
     description: 'Fail the build if vulnerable algorithms are found'
@@ -20,7 +20,7 @@ inputs:
     default: 'medium'
     required: false
   pqc_api_key:
-    description: 'API key for AI disambiguation + dashboard (paid). When set, finding metadata is sent to qryptive.ai for false-positive reduction. Source code is never uploaded.'
+    description: 'API key for auto-remediation (paid tier). If set, opens a fix PR automatically.'
     required: false
   migration_mode:
     description: 'Migration strategy: pqc_only (default), staged_rollout, pqc_preferred, hybrid'
@@ -38,10 +38,14 @@ inputs:
     description: 'Platform scan ID to link the fix PR back to (set automatically when triggered by platform)'
     required: false
   platform_url:
-    description: 'Override the platform API base URL (default: https://api.qryptive.ai). Useful for testing.'
+    description: 'Override the platform API base URL (default: https://api.qryptive.ai). Useful for testing against a local or staging instance via ngrok.'
+    required: false
+  auto_fix:
+    description: 'Open a fix PR automatically when vulnerabilities are found. Requires pqc_api_key and github_token.'
+    default: 'false'
     required: false
   github_token:
-    description: 'GitHub token used to create fix PRs. Pass secrets.GITHUB_TOKEN. Required only for the paid auto-fix tier.'
+    description: 'GitHub token used to create fix PRs. Pass secrets.GITHUB_TOKEN. Required only when auto_fix is true.'
     required: false
 
 runs:
@@ -52,6 +56,7 @@ runs:
     INPUT_FAIL_ON_VULNERABLE: ${{ inputs.fail_on_vulnerable }}
     INPUT_SEVERITY_THRESHOLD: ${{ inputs.severity_threshold }}
     INPUT_PQC_API_KEY: ${{ inputs.pqc_api_key }}
+    INPUT_AUTO_FIX: ${{ inputs.auto_fix }}
     INPUT_MIGRATION_MODE: ${{ inputs.migration_mode }}
     INPUT_REPORT_FORMAT: ${{ inputs.report_format }}
     INPUT_SCAN_SCOPE: ${{ inputs.scan_scope }}
