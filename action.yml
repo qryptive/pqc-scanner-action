@@ -63,3 +63,15 @@ runs:
     INPUT_SCAN_ID: ${{ inputs.scan_id }}
     PQC_PLATFORM_URL: ${{ inputs.platform_url }}
     PQC_GITHUB_TOKEN: ${{ inputs.github_token }}
+    # Enable asset discovery (PEM keys, certs, SSH keys, secrets, KMS refs, TLS
+    # configs) so GitHub Action customers get the same coverage as platform/UI
+    # scans. Without this, GHA scans only catch crypto-code findings — they
+    # miss embedded cert files, hardcoded keys, weak TLS configs etc.
+    # NOTE: pem_utils.PEM_BLOCK_RE has known catastrophic backtracking on
+    # malformed PEM blocks (BEGIN without matching END). Mitigation tracked
+    # as a TODO; in practice only fires on truncated PEMs / doc examples
+    # without END label. Worst case: one customer file hangs scan ~5 min
+    # before platform timeout catches it.
+    SCANNER_ASSET_DISCOVERY_ENABLED: 'true'
+    SCANNER_FINDING_GATE_ENABLED: 'true'
+    SCANNER_TIER_GATE_ENABLED: 'true'
