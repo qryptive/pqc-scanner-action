@@ -38,7 +38,7 @@ inputs:
     description: 'Platform scan ID to link the fix PR back to (set automatically when triggered by platform)'
     required: false
   platform_url:
-    description: 'Override the platform API base URL (default: https://api.qryptive.ai). Useful for testing against a local or staging instance via ngrok.'
+    description: 'Override the platform API base URL (default: https://qryptive.ai). Useful for testing against a local or staging instance via ngrok.'
     required: false
   auto_fix:
     description: 'Open a fix PR automatically when vulnerabilities are found. Requires pqc_api_key and github_token.'
