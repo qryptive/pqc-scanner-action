@@ -41,8 +41,8 @@ inputs:
     description: 'Override the platform API base URL (default: https://qryptive.ai). Useful for testing against a local or staging instance via ngrok.'
     required: false
   auto_fix:
-    description: 'Open a fix PR automatically when vulnerabilities are found. Requires pqc_api_key and github_token.'
-    default: 'false'
+    description: 'Open a fix PR automatically when vulnerabilities are found. Default: true. Requires pqc_api_key + github_token + workflow `contents: write` and `pull-requests: write` permissions. Set to false to disable.'
+    default: 'true'
     required: false
   github_token:
     description: 'GitHub token used to create fix PRs. Pass secrets.GITHUB_TOKEN. Required only when auto_fix is true.'
