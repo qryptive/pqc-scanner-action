@@ -8,8 +8,8 @@ branding:
 
 inputs:
   paths:
-    description: 'Glob patterns to scan (space-separated)'
-    default: '**/*.py **/*.java'
+    description: 'Glob patterns to scan (space-separated). Default is full-repo scan to match platform/UI scans; scanner internally skips binaries, files >1MB, and low-signal data formats (.json/.yaml/.xml per-file). Source code (.py/.java/.go), IaC (.tf/.yaml/Dockerfile), manifest files (pom.xml), and asset files (.pem/.crt/.key/.properties) all need to be in the file list for full parity with platform/UI scans.'
+    default: '**/*'
     required: false
   fail_on_vulnerable:
     description: 'Fail the build if vulnerable algorithms are found'
