@@ -37,6 +37,10 @@ inputs:
   scan_id:
     description: 'Platform scan ID to link the fix PR back to (set automatically when triggered by platform)'
     required: false
+  fix_run_id:
+    description: "Correlation id for an explicit repo-level fix run (set by platform dispatch). Empty for normal scans."
+    required: false
+    default: ""
   platform_url:
     description: 'Override the platform API base URL (default: https://qryptive.ai). Useful for testing against a local or staging instance via ngrok.'
     required: false
@@ -61,6 +65,7 @@ runs:
     INPUT_REPORT_FORMAT: ${{ inputs.report_format }}
     INPUT_SCAN_SCOPE: ${{ inputs.scan_scope }}
     INPUT_SCAN_ID: ${{ inputs.scan_id }}
+    INPUT_FIX_RUN_ID: ${{ inputs.fix_run_id }}
     PQC_PLATFORM_URL: ${{ inputs.platform_url }}
     PQC_GITHUB_TOKEN: ${{ inputs.github_token }}
     # Enable asset discovery (PEM keys, certs, SSH keys, secrets, KMS refs, TLS
