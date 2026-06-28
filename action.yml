@@ -80,3 +80,9 @@ runs:
     SCANNER_ASSET_DISCOVERY_ENABLED: 'true'
     SCANNER_FINDING_GATE_ENABLED: 'true'
     SCANNER_TIER_GATE_ENABLED: 'true'
+    # Phase 4 IaC config detection (WireGuard/IPsec/OpenVPN .conf/.ovpn,
+    # docker-compose TLS_VERSION, CI/CD cosign signing keys, Istio/Linkerd
+    # service-mesh mTLS). Gives GitHub Action customers parity with the
+    # platform/UI scan path (ECS scanner runs with this flag on). Detectors
+    # are content-gated, so generic non-crypto .conf files yield no findings.
+    SCANNER_IAC_EXTENDED_DETECTION_ENABLED: 'true'
