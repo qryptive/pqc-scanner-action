@@ -34,6 +34,10 @@ inputs:
     description: 'Files to scan: changed (only files in this push/PR, default) or all (entire repo)'
     default: 'changed'
     required: false
+  baseline_scan:
+    description: 'Scan the whole repo on the first run even when scan_scope is changed (default true). Set false to disable.'
+    default: 'true'
+    required: false
   scan_id:
     description: 'Platform scan ID to link the fix PR back to (set automatically when triggered by platform)'
     required: false
@@ -64,6 +68,7 @@ runs:
     INPUT_MIGRATION_MODE: ${{ inputs.migration_mode }}
     INPUT_REPORT_FORMAT: ${{ inputs.report_format }}
     INPUT_SCAN_SCOPE: ${{ inputs.scan_scope }}
+    INPUT_BASELINE_SCAN: ${{ inputs.baseline_scan }}
     INPUT_SCAN_ID: ${{ inputs.scan_id }}
     INPUT_FIX_RUN_ID: ${{ inputs.fix_run_id }}
     PQC_PLATFORM_URL: ${{ inputs.platform_url }}
@@ -86,3 +91,28 @@ runs:
     # platform/UI scan path (ECS scanner runs with this flag on). Detectors
     # are content-gated, so generic non-crypto .conf files yield no findings.
     SCANNER_IAC_EXTENDED_DETECTION_ENABLED: 'true'
+    # Keypair lifecycle graph (QP-36). Parity with the platform/UI scan path,
+    # where pqc-scanner runs with this on. Without it the CI path builds no
+    # graph and the customer's Keypair Estate stays permanently empty with no
+    # error — the bug QP-36 exists to fix. Note the flag alone is NOT sufficient
+    # (the assembly has to be reachable in-process); it is necessary, though.
+    SCANNER_KEYPAIR_GRAPH_ENABLED: 'true'
+    # Ceiling on the findings-bearing file set handed to the graph builder. The
+    # graph is one whole-repo pass holding a cross-file map resident, unlike the
+    # scan itself which releases each ~50-file batch — this is what stops a
+    # pathological repo hanging a customer's build.
+    KEYPAIR_GRAPH_MAX_FILES: '2000'
+    # Cross-file keypair candidates (QP-39). Widens which non-finding-bearing
+    # Python files get an extra LibCST pass so a verifier/consumer in a file
+    # with no crypto finding of its own can still attach to the graph. Off
+    # (false/0/no) reverts to byte-identical pre-QP-39 behaviour.
+    SCANNER_KEYPAIR_CANDIDATES_ENABLED: 'true'
+    # Fixes the Python keygen anchor's enclosing-class resolution so
+    # cross-file verifier attach works even when a finding's own class_name
+    # is unset. Independent of the candidates switch above (plan §9).
+    SCANNER_KEYPAIR_ANCHOR_CLASS_ENABLED: 'true'
+    # Ceiling on the candidate file set (measured default, plan §2.5.2b).
+    # Candidates over this cap are dropped in sha256(path) order — a WARN
+    # logged in keypair_graph_core.py, never surfaced to the customer — and
+    # the graph is still built from what's left.
+    KEYPAIR_GRAPH_MAX_CANDIDATE_FILES: '100'
