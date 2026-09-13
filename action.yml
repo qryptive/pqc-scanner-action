@@ -22,6 +22,9 @@ inputs:
   pqc_api_key:
     description: 'API key for auto-remediation (paid tier). If set, opens a fix PR automatically.'
     required: false
+  pqc_scanner_key:
+    description: 'Free scanner key (get one at https://qryptive.ai/scanner/get-key) — an alternative to pqc_api_key for a workflow with no Qryptive account. Ignored if pqc_api_key is set. Does not enable auto-fix.'
+    required: false
   migration_mode:
     description: 'Migration strategy: pqc_only (default), staged_rollout, pqc_preferred, hybrid'
     default: 'pqc_only'
@@ -64,6 +67,7 @@ runs:
     INPUT_FAIL_ON_VULNERABLE: ${{ inputs.fail_on_vulnerable }}
     INPUT_SEVERITY_THRESHOLD: ${{ inputs.severity_threshold }}
     INPUT_PQC_API_KEY: ${{ inputs.pqc_api_key }}
+    INPUT_PQC_SCANNER_KEY: ${{ inputs.pqc_scanner_key }}
     INPUT_AUTO_FIX: ${{ inputs.auto_fix }}
     INPUT_MIGRATION_MODE: ${{ inputs.migration_mode }}
     INPUT_REPORT_FORMAT: ${{ inputs.report_format }}
@@ -83,6 +87,9 @@ runs:
     # without END label. Worst case: one customer file hangs scan ~5 min
     # before platform timeout catches it.
     SCANNER_ASSET_DISCOVERY_ENABLED: 'true'
+    # TLS servers started in code/config (QP-317). Rides the asset-discovery pass
+    # above; default on, set explicitly so a runner mirrors pqc-scanner.
+    SCANNER_TLS_SERVER_DETECTOR_ENABLED: 'true'
     SCANNER_FINDING_GATE_ENABLED: 'true'
     SCANNER_TIER_GATE_ENABLED: 'true'
     # Phase 4 IaC config detection (WireGuard/IPsec/OpenVPN .conf/.ovpn,
