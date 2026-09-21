@@ -38,7 +38,7 @@ inputs:
     default: 'changed'
     required: false
   baseline_scan:
-    description: 'Scan the whole repo on the first run even when scan_scope is changed (default true). Set false to disable.'
+    description: 'Scan the whole repo on the first run even when scan_scope is changed (default true). Also controls the platform periodically requesting a fresh whole-repo scan to keep repository-wide state (like which keys are still in use) from going stale. Set false to disable both.'
     default: 'true'
     required: false
   scan_id:
@@ -118,6 +118,21 @@ runs:
     # cross-file verifier attach works even when a finding's own class_name
     # is unset. Independent of the candidates switch above (plan §9).
     SCANNER_KEYPAIR_ANCHOR_CLASS_ENABLED: 'true'
+    # Per-endpoint built_in/fetched/unknown key-distribution classification
+    # (QP-355). Parity with the platform/UI scan path, where pqc-scanner runs
+    # with this on; default true, set explicitly so a runner mirrors it.
+    SCANNER_KEY_DISTRIBUTION_ENABLED: 'true'
+    # Per-site ready/upgrade_needed/unknown post-quantum capability, read from
+    # the build files this runner collects off the checked-out workspace
+    # (QP-363 D12). Parity with the platform/UI scan path; default true, set
+    # explicitly so a runner mirrors it. Off, the runner reads no build files at
+    # all and every site reads unknown.
+    SCANNER_PQ_CAPABILITY_ENABLED: 'true'
+    # Certificate/public-key pin detection (QP-355 D7/D13) — OkHttp, TrustKit,
+    # Android network_security_config.xml, Python/Go/JS fingerprint checks and
+    # HTTP Public-Key-Pins headers. Parity with the platform/UI scan path;
+    # default true, set explicitly so a runner mirrors it.
+    SCANNER_PIN_DETECTION_ENABLED: 'true'
     # Ceiling on the candidate file set (measured default, plan §2.5.2b).
     # Candidates over this cap are dropped in sha256(path) order — a WARN
     # logged in keypair_graph_core.py, never surfaced to the customer — and
