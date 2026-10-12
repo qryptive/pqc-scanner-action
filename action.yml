@@ -133,6 +133,14 @@ runs:
     # HTTP Public-Key-Pins headers. Parity with the platform/UI scan path;
     # default true, set explicitly so a runner mirrors it.
     SCANNER_PIN_DETECTION_ENABLED: 'true'
+    # Key definitions in infrastructure code and the code that calls a key service
+    # (QP-486). Terraform key resources (AWS KMS, Azure Key Vault, Google Cloud KMS,
+    # Vault transit) are reported with their real algorithm and the facts the platform
+    # joins to a call by key reference; KMS/Key Vault/Cloud KMS/Vault calls become sites
+    # carrying the reference as written. Parity with the platform/UI scan path; default
+    # true, set explicitly so a runner mirrors it and a rollback flips one visible place.
+    SCANNER_IAC_KEY_DEFINITIONS_ENABLED: 'true'
+    SCANNER_CLOUD_KEY_REFERENCES_ENABLED: 'true'
     # Ceiling on the candidate file set (measured default, plan §2.5.2b).
     # Candidates over this cap are dropped in sha256(path) order — a WARN
     # logged in keypair_graph_core.py, never surfaced to the customer — and
