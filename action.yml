@@ -128,6 +128,11 @@ runs:
     # explicitly so a runner mirrors it. Off, the runner reads no build files at
     # all and every site reads unknown.
     SCANNER_PQ_CAPABILITY_ENABLED: 'true'
+    # Service-mesh observations (QP-526): per-file facts about Istio, Linkerd, Envoy, Consul
+    # and Cilium settings, sent once per scan and read by the post-quantum switch page.
+    # Default true, set explicitly so a runner mirrors the platform/UI scan path. Off, the
+    # keys are present and empty, so nothing is stored and nothing is retired.
+    SCANNER_MESH_OBSERVATIONS_ENABLED: 'true'
     # Certificate/public-key pin detection (QP-355 D7/D13) — OkHttp, TrustKit,
     # Android network_security_config.xml, Python/Go/JS fingerprint checks and
     # HTTP Public-Key-Pins headers. Parity with the platform/UI scan path;
