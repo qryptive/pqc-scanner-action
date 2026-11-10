@@ -1,5 +1,5 @@
 name: 'PQC Vulnerability Scanner'
-description: 'Detect quantum-vulnerable cryptography (RSA, ECDSA, ECDH, DES, SHA-1, etc.). Scanner runs in your runner — code stays in your environment.'
+description: 'Detect quantum-vulnerable cryptography (RSA, ECDSA, ECDH, DES, SHA-1, etc.). Runs in your runner; without a Qryptive key it sends nothing to Qryptive.'
 author: 'Qryptive'
 
 branding:
@@ -34,7 +34,7 @@ inputs:
     default: 'annotations'
     required: false
   scan_scope:
-    description: 'Files to scan: changed (only files in this push/PR, default) or all (entire repo)'
+    description: 'Files to scan: changed (only files in this push/PR, default), all (entire repo), or auto (changed files on pull requests, the entire repo on every other event). An unrecognised value scans the entire repo and prints a warning.'
     default: 'changed'
     required: false
   baseline_scan:
@@ -59,6 +59,9 @@ inputs:
     description: 'GitHub token used to create fix PRs. Pass secrets.GITHUB_TOKEN. Required only when auto_fix is true.'
     required: false
 
+outputs:
+  report_path:
+    description: 'Workspace-relative path of the JSON report (qryptive-scan-report.json) when report_format is json.'
 runs:
   using: 'docker'
   image: 'docker://ghcr.io/qryptive/pqc-scanner:v1'
