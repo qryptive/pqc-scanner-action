@@ -8,12 +8,33 @@ Qryptive account and no key.
 What leaves your runner depends only on which Qryptive credential you give the action. Read
 [what is sent, and when](https://qryptive.ai/privacy/scanner) before you add a key.
 
-<!-- MEASURED_SCAN_TIME: replaced at release with the measured scan time; no number until then. -->
+## See a result first
+
+- [A scan of a deliberately vulnerable repository](https://github.com/qryptive/pqc-scan-demo/actions): open the latest run and its job summary. It shows what findings look like.
+- [A scan of a post-quantum repository](https://github.com/qryptive/pqc-scan-clean-example/actions): the same workflow on code that already uses ML-DSA and ML-KEM. It reports no vulnerable cryptography in `src/`, and it still catches the deliberately weak files in `control/`.
+
+Both repositories use the quick-start workflow below. Fork one and run it to see the current
+behaviour. Counts can change between releases.
+
+## How long it takes
+
+Measured on 2026-11-15 on a standard GitHub-hosted `ubuntu-latest` runner, whole repository, no
+Qryptive key:
+
+| Repository | Files scanned | Job time | Peak memory |
+|---|---|---|---|
+| Flask | 90 | 26 seconds | 1.2 GB |
+| Django | 3,064 | about 6 minutes | 1.3 GB |
+| Kubernetes | 21,958 | about 6 minutes | 1.4 GB |
+
+Time depends on the code as well as the file count. Django took longer than Kubernetes despite far
+fewer files. The workflow below stops any run at 30 minutes. To scan less, narrow the `paths`
+input. Pull requests scan only the changed files, so they are much faster.
 
 ## Quick start
 
 Add this file as `.github/workflows/pqc-scan.yml`. It sends nothing to Qryptive, never fails the
-build because of findings, never opens a pull request, and only reads your repository (`contents: read`). Pull requests
+build because of findings, and only reads your repository (`contents: read`). Pull requests
 into `main` scan the changed files; pushes to `main`, the weekly run and manual runs scan the whole
 repository.
 
@@ -58,7 +79,6 @@ jobs:
           fail_on_vulnerable: "false"   # set to "true" to fail the build on findings
           severity_threshold: medium
           scan_scope: auto              # changed files on pull requests, the whole repo otherwise
-          auto_fix: "false"
 ```
 <!-- starter:end -->
 
@@ -69,13 +89,16 @@ Findings appear in the job log, the job summary, and as annotations on the lines
 the build on findings, set `fail_on_vulnerable: "true"`; `severity_threshold` decides which
 findings count.
 
-## Credentials
+## Credentials (all optional)
+
+You do not need any Qryptive credential to scan. The quick start uses none and works fully. A key only
+changes what the run sends to Qryptive, as this table shows.
 
 | Qryptive credential | What the run sends to Qryptive |
 |---|---|
 | **None** (no `pqc_scanner_key`, no `pqc_api_key`) | **Nothing.** No telemetry, no results, no check-in. |
-| **Free scanner key** (`pqc_scanner_key`) | **One check-in per run**: the key, the client kind (`ci`) and, if the image carries one, the scanner version. No code, no file names, no findings. It does not enable auto-fix. |
-| **Organization API key** (`pqc_api_key`) | **The full finding records**, including the **source lines around each finding**, certificate and key details, dependency names and versions, TLS settings, repository and pull request details and the list of files scanned. With auto-fix, also the full contents of the files being fixed. |
+| **Free scanner key** (`pqc_scanner_key`) | **One check-in per run**: the key, the client kind (`ci`) and, if the image carries one, the scanner version. No code, no file names, no findings. It unlocks nothing: the scan is identical. |
+| **Organization API key** (`pqc_api_key`) | **The full finding records**, including the **source lines around each finding**, certificate and key details, dependency names and versions, TLS settings, repository and pull request details and the list of files scanned. Some options send more, such as whole files; the privacy page lists every case. |
 
 When both keys are set, the organization API key is used and no free-key check-in is made. The run
 still talks to GitHub and `ghcr.io` (checkout, the scanner image, annotations, the job summary). The
@@ -84,9 +107,9 @@ full list, field by field: [qryptive.ai/privacy/scanner](https://qryptive.ai/pri
 To check the no-credential row yourself, block `*.qryptive.ai` in your runner's egress policy. The
 scan completes.
 
-### Free scanner key
+### Free scanner key (optional)
 
-A free key counts your runs against a free account. Get one at
+Skip this unless you want your runs counted against a free Qryptive account. It changes nothing about the scan. Get one at
 [qryptive.ai/scanner/get-key](https://qryptive.ai/scanner/get-key) (confirm your email address,
 copy the key), add it as the repository secret `QRYPTIVE_SCANNER_KEY`, and add one line to the
 step:
@@ -168,38 +191,6 @@ The job summary states the run outcome: whether every file was examined, how man
 why, and findings by every severity. A scan that could not examine every file says so instead of
 reporting a clean result.
 
-## Auto-fix pull requests (paid)
-
-With an organization API key on a plan that includes it, the action can open a pull request with
-post-quantum migrations applied. `auto_fix` defaults to `true` in `action.yml`, so every workflow
-that does not want fix pull requests must set `auto_fix: "false"`, as the quick start does.
-
-Auto-fix sends the full contents of each file it will fix to Qryptive. The workflow must grant
-write permissions and pass the GitHub token:
-
-```yaml
-permissions:
-  contents: write          # push the fix branch
-  pull-requests: write     # open the pull request
-
-jobs:
-  pqc:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: qryptive/pqc-scanner-action@v1
-        with:
-          pqc_api_key: ${{ secrets.PQC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          migration_mode: pqc_only
-          fail_on_vulnerable: "false"
-```
-
-One-time repository setting: **Settings → Actions → General → Workflow permissions → "Allow GitHub
-Actions to create and approve pull requests"**, or creating the pull request fails with 403.
-Re-runs on the same commit reuse an open fix pull request instead of opening another. Auto-fix can
-also be turned off for the whole organization from the [Qryptive dashboard](https://qryptive.ai).
-
 ## Inputs
 
 | Input | Default | Description |
@@ -210,13 +201,9 @@ also be turned off for the whole organization from the [Qryptive dashboard](http
 | `scan_scope` | `changed` | `changed` (files in this push or pull request), `all` (the whole repository), or `auto` (changed files on `pull_request`, the whole repository on every other event, including `pull_request_target`). An unrecognised value scans the whole repository and prints a warning. |
 | `baseline_scan` | `true` | Scan the whole repository on the first run even when `scan_scope` is `changed`. Also lets the Qryptive platform periodically request a fresh whole-repository scan (with an organization API key). `false` turns off both. |
 | `report_format` | `annotations` | `annotations`, `sarif` or `json` (see above). |
-| `pqc_scanner_key` | — | Free scanner key. Ignored when `pqc_api_key` is set. Does not enable auto-fix. |
-| `pqc_api_key` | — | Organization API key. Sends results to your Qryptive dashboard and enables auto-fix on plans that include it. |
-| `auto_fix` | `true` | Open a fix pull request when vulnerabilities are found. Needs `pqc_api_key`, `github_token` and write permissions. Set `"false"` to turn it off. |
-| `github_token` | — | Token used to open fix pull requests. Pass `secrets.GITHUB_TOKEN`. Only needed for auto-fix. |
-| `migration_mode` | `pqc_only` | Auto-fix strategy: `pqc_only`, `staged_rollout`, `pqc_preferred`, `hybrid`. |
+| `pqc_scanner_key` | — | Free scanner key. Ignored when `pqc_api_key` is set. It unlocks nothing: the scan is identical. |
+| `pqc_api_key` | — | Organization API key. Sends results to your Qryptive dashboard on plans that include the dashboard. |
 | `scan_id` | — | Set automatically by Qryptive platform integrations. |
-| `fix_run_id` | `""` | Set automatically by Qryptive platform integrations. |
 | `platform_url` | — | Override the Qryptive API base URL, for testing. |
 
 ## Outputs
@@ -229,7 +216,7 @@ also be turned off for the whole organization from the [Qryptive dashboard](http
 
 The action is a Docker image (`ghcr.io/qryptive/pqc-scanner:v1`). The scanner inside it is compiled
 to a native binary with [Nuitka](https://nuitka.net/), so the image does not contain the scanner's
-Python source. Auto-fix migrations are computed on the Qryptive platform, not in your runner.
+Python source.
 
 The same image also has a mode for scanning repositories outside CI (on-prem or air-gapped). Ask
 [support@qryptive.ai](mailto:support@qryptive.ai).
