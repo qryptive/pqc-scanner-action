@@ -10,8 +10,8 @@ What leaves your runner depends only on which Qryptive credential you give the a
 
 ## See a result first
 
-- [A scan of a deliberately vulnerable repository](https://github.com/qryptive/pqc-scan-demo/actions): open the latest run and its job summary. It shows what findings look like.
-- [A scan of a post-quantum repository](https://github.com/qryptive/pqc-scan-clean-example/actions): the same workflow on code that already uses ML-DSA and ML-KEM. It reports no vulnerable cryptography in `src/`, and it still catches the deliberately weak files in `control/`.
+- [A scan of a deliberately vulnerable repository](https://github.com/qryptive/pqc-scan-demo/blob/main/expected/RESULT.md): the recorded result, readable without a GitHub sign-in. It shows what findings look like. Signed in, open the [latest run](https://github.com/qryptive/pqc-scan-demo/actions) for its job summary; GitHub hides the summary from signed-out visitors.
+- [A scan of a post-quantum repository](https://github.com/qryptive/pqc-scan-clean-example/blob/main/expected/RESULT.md): the same workflow on code that already uses ML-DSA and ML-KEM. It reports no vulnerable cryptography in `src/`, and it still catches the deliberately weak files in `control/`.
 
 Both repositories use the quick-start workflow below. Fork one and run it to see the current
 behaviour. Counts can change between releases.
