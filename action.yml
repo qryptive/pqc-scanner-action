@@ -154,6 +154,20 @@ runs:
     # "cut short" only when it truly was. Parity with the platform/UI scan path; default
     # true, set explicitly so a runner mirrors it and a rollback flips one visible place.
     SCANNER_GO_FULL_IMPORT_CHECK_ENABLED: 'true'
+    # QP-670: Java algorithm names read from a constant in another batch class, or from the
+    # module's Spring config (application.yml / .properties). Default true, set explicitly so a
+    # runner mirrors the platform/UI scan path and a rollback flips one visible place.
+    SCANNER_JAVA_CROSS_CLASS_CONSTANTS_ENABLED: 'true'
+    # QP-670: crypto calls in Java constructors, initializer blocks and field initializers are
+    # scanned like method bodies. Default true, set explicitly so a rollback flips one visible place.
+    SCANNER_JAVA_NON_METHOD_SCOPES_ENABLED: 'true'
+    # QP-670: key-exchange group lists and typed SSH host keys from sshd/ssh_config, HAProxy,
+    # nginx and the ingress-nginx ConfigMap. Default true, set explicitly so a rollback flips one
+    # visible place.
+    SCANNER_KEX_CONFIG_DETECTION_ENABLED: 'true'
+    # QP-670: Go tls.Config CurvePreferences literals. Default true, set explicitly so a rollback
+    # flips one visible place.
+    SCANNER_GO_TLS_CURVES_ENABLED: 'true'
     # Ceiling on the candidate file set (measured default, plan §2.5.2b).
     # Candidates over this cap are dropped in sha256(path) order — a WARN
     # logged in keypair_graph_core.py, never surfaced to the customer — and

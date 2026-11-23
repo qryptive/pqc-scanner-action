@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -93,14 +93,15 @@ jobs:
 
       - name: Keep the scan report
         if: always() && hashFiles('qryptive-scan-report.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: qryptive-scan-report
           path: qryptive-scan-report.json
 ```
 <!-- starter:end -->
 
-If your default branch is not `main`, change both `branches:` lines. To generate the file with
+If your default branch is not `main`, change both `branches:` lines. On a self-hosted runner, use a runner release that supports Node 24 actions: the
+checkout and artifact steps use their current majors, which run on Node 24. To generate the file with
 your branch and options filled in, use [qryptive.ai/scanner/install](https://qryptive.ai/scanner/install).
 
 Findings appear in the job log, the job summary, the report artifact, and as annotations on the
@@ -165,9 +166,10 @@ are read by the Qryptive platform.
 - Service-mesh mTLS configuration (Istio, Linkerd, Envoy, Consul) (`.yaml`, `.yml`)
 - Cloud key definitions in Terraform (AWS KMS, Azure Key Vault, Google Cloud KMS, Vault transit) (`.tf`)
 - PKCS#11, OpenSSL and Java security configuration (`openssl.cnf`, `pkcs11.cfg`, `sunpkcs11.cfg`, `java.security`, `softhsm2.conf`)
-- Web server configuration (nginx, Apache, HAProxy) (`.conf`)
+- Web server configuration (nginx, Apache, HAProxy) (`.conf`, `haproxy.cfg`)
 - VPN configuration (WireGuard, IPsec, OpenVPN) (`.conf`, `.ovpn`)
 - Environment files (`.env`)
+- Spring Boot configuration read by Java code (`application.yml`, `application.properties`)
 
 **Dependency manifests**
 
@@ -184,7 +186,7 @@ are read by the Qryptive platform.
 
 - PEM certificates and private keys, including PEM blocks inside other files (`.pem`, `.crt`, `.cert`, `.key`)
 - Binary DER certificates and keys (`.der`, `.cer`, `.crt`)
-- SSH keys
+- SSH keys and SSH server/client configuration (`sshd_config`, `ssh_config`)
 - JSON Web Key Sets (`.json`)
 - Keys in Kubernetes Secrets (`.yaml`, `.yml`)
 - References to keystore files (their contents are not read) (`.p12`, `.pfx`, `.jks`, `.keystore`)
