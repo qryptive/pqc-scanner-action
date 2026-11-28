@@ -106,7 +106,8 @@ your branch and options filled in, use [qryptive.ai/scanner/install](https://qry
 
 Findings appear in the job log, the job summary, the report artifact, and as annotations on the
 lines with findings. With `report_format: sarif` the run writes the SARIF file instead of the JSON
-report, and the artifact step skips. To fail the build on findings, set
+report, and the artifact step skips. To send the SARIF file to GitHub code scanning, see
+[Uploading SARIF to code scanning](#uploading-sarif-to-code-scanning). To fail the build on findings, set
 `fail_on_vulnerable: "true"`; `severity_threshold` decides which findings count.
 
 ## Credentials (all optional)
@@ -213,13 +214,84 @@ examined and why (up to 10 named per reason; the JSON report lists them all), an
 severity. A scan that could not examine every file says so instead of reporting a clean result. The
 summary shows each recommendation as one short sentence; the JSON report keeps the full text.
 
+## Uploading SARIF to code scanning
+
+The upload step takes the commit it files results against from `git rev-parse HEAD` in its
+`checkout_path`. That is not always the commit the action scanned. On a pull request, GitHub checks
+out a merge commit, but the action scans the pull request's own head commit, read from git. On a run
+that commits changes for you, the workspace ends at that new commit. So name the analysed commit in a
+fresh repository under `runner.temp` and give that path, plus the `analysed_sha` and `analysed_ref`
+outputs, to the upload:
+
+```yaml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read          # private repositories only
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: PQC Vulnerability Scanner
+        id: pqc
+        uses: qryptive/pqc-scanner-action@v1
+        with:
+          fail_on_vulnerable: "false"
+          scan_scope: auto
+          report_format: sarif
+
+      - name: Check out the analysed commit for code scanning
+        id: analysed
+        if: always() && hashFiles('pqc-results.sarif') != '' && steps.pqc.outputs.analysed_sha != '' && steps.pqc.outputs.analysed_ref != ''
+        continue-on-error: true
+        shell: bash
+        env:
+          ANALYSED_SHA: ${{ steps.pqc.outputs.analysed_sha }}
+          DEST: ${{ runner.temp }}/qryptive-analysed-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          if [ -e "$DEST" ] || [ -L "$DEST" ]; then echo "destination already exists" >&2; exit 1; fi
+          objects="$(git -C "$GITHUB_WORKSPACE" rev-parse --path-format=absolute --git-common-dir)/objects"
+          git init -q "$DEST"
+          echo "$objects" > "$DEST/.git/objects/info/alternates"
+          git -C "$DEST" update-ref --no-deref HEAD "$ANALYSED_SHA"
+          test "$(git -C "$DEST" rev-parse HEAD)" = "$ANALYSED_SHA"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Upload findings to code scanning
+        if: always() && steps.analysed.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: pqc-results.sarif
+          category: qryptive-pqc
+          checkout_path: ${{ steps.analysed.outputs.path }}
+          sha: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && steps.pqc.outputs.analysed_sha || '' }}
+          ref: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && steps.pqc.outputs.analysed_ref || '' }}
+```
+
+The second step writes nothing into the workspace and copies no files: it creates a repository whose
+`HEAD` is the analysed commit, using the workspace's own git objects. If it fails, nothing is uploaded,
+so results are never filed against the wrong commit. The workflows Qryptive generates for you (with
+`report_format: sarif`) include these steps.
+
+A pull request from a fork is different. GitHub files a fork's code-scanning results against the
+merge commit (`GITHUB_SHA`), and the upload step ignores `sha` and `ref` for forks. So on a fork the
+action still scans only the pull request's changed files, but reads them as they stand in that merge
+commit, from git (a file the base branch renamed is scanned under its new name). The outputs name the
+merge commit and `refs/pull/<N>/merge`; the same step above names that merge commit for the upload, which
+then uses its default `sha` and `ref`, so the alert lines match what GitHub shows. On a pull request from the same repository,
+the action scans the pull request's own head commit. If the action
+could not read a pull request's files from git, it scans nothing and both outputs are empty, so nothing is
+uploaded. With `fail_on_vulnerable: "true"` that run fails with exit code 3.
+
 ## Inputs
 
 | Input | Default | Description |
 |---|---|---|
 | `paths` | `**/*` | Glob patterns to scan, space-separated. The scanner skips binaries, files over 1 MB and files it has no detector for. |
-| `fail_on_vulnerable` | `true` | Fail the build when findings at or above `severity_threshold` are found. |
-| `severity_threshold` | `medium` | Minimum severity that counts: `critical`, `high`, `medium`, `low`. |
+| `fail_on_vulnerable` | `true` | Fail the build when findings at or above `severity_threshold` are found (see [Exit codes](#exit-codes)). |
+| `severity_threshold` | `medium` | Minimum severity that counts for the summary table, the annotations and the build failure: `critical`, `high`, `medium`, `low` or `info`. `none` means no minimum: every finding counts, the same as `info`. Any other value prints a warning and uses `medium`. |
 | `scan_scope` | `changed` | `changed` (files in this push or pull request), `all` (the whole repository), or `auto` (changed files on `pull_request`, the whole repository on every other event, including `pull_request_target`). An unrecognised value scans the whole repository and prints a warning. |
 | `baseline_scan` | `true` | Scan the whole repository on the first run even when `scan_scope` is `changed`. Also lets the Qryptive platform periodically request a fresh whole-repository scan (with an organization API key). `false` turns off both. |
 | `report_format` | `annotations` | `annotations`, `sarif` or `json` (see above). |
@@ -228,11 +300,22 @@ summary shows each recommendation as one short sentence; the JSON report keeps t
 | `scan_id` | — | Set automatically by Qryptive platform integrations. |
 | `platform_url` | — | Override the Qryptive API base URL, for testing. |
 
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | The scan passed (or `fail_on_vulnerable` is `"false"`). |
+| `1` | Findings at or above `severity_threshold`, with `fail_on_vulnerable: "true"`. |
+| `2` | The run could not finish because of the repository's own configuration (a missing token or permission). |
+| `3` | Nothing was analysed, with `fail_on_vulnerable: "true"`: the pull or merge request's own files could not be read from git, so a required check never passes on an empty scan. |
+
 ## Outputs
 
 | Output | Description |
 |---|---|
 | `report_path` | Workspace-relative path of `qryptive-scan-report.json` when `report_format` is `json`. |
+| `analysed_sha` | The commit the findings describe, as git resolved what was read. On a pull request this is the pull request's own head commit (read from git, not the merge commit GitHub checks out); otherwise the checked-out commit. Empty when nothing was analysed. |
+| `analysed_ref` | The ref for `analysed_sha`: `refs/pull/<N>/head` on a pull request, otherwise `GITHUB_REF`. Empty when nothing was analysed. |
 
 ## How the action is built
 

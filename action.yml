@@ -12,11 +12,11 @@ inputs:
     default: '**/*'
     required: false
   fail_on_vulnerable:
-    description: 'Fail the build if vulnerable algorithms are found'
+    description: 'Fail the build if vulnerable algorithms are found. Exit codes: 0 passed; 1 findings at or above severity_threshold; 2 auto-fix blocked by the repository configuration; 3 nothing was analysed (a pull or merge request whose files could not be read from git), only when this is true.'
     default: 'true'
     required: false
   severity_threshold:
-    description: 'Minimum severity to report: critical, high, medium, low'
+    description: 'Minimum severity that counts (table, annotations, build failure): critical, high, medium, low, info. none means every finding counts, the same as info. Any other value warns and uses medium.'
     default: 'medium'
     required: false
   pqc_api_key:
@@ -62,6 +62,10 @@ inputs:
 outputs:
   report_path:
     description: 'Workspace-relative path of the JSON report (qryptive-scan-report.json) when report_format is json.'
+  analysed_sha:
+    description: 'The commit the findings describe: a pull request''s own head commit when the run read it, else GITHUB_SHA. Pass it as `sha` to github/codeql-action/upload-sarif.'
+  analysed_ref:
+    description: 'The ref for that commit: refs/pull/<N>/head when the run read a pull request''s own head, else GITHUB_REF. Pass it as `ref` to github/codeql-action/upload-sarif.'
 runs:
   using: 'docker'
   image: 'docker://ghcr.io/qryptive/pqc-scanner:v1'
@@ -136,6 +140,12 @@ runs:
     # Default true, set explicitly so a runner mirrors the platform/UI scan path. Off, the
     # keys are present and empty, so nothing is stored and nothing is retired.
     SCANNER_MESH_OBSERVATIONS_ENABLED: 'true'
+    # MCP server inventory (QP-702): facts about MCP client config files (.mcp.json, .cursor/mcp.json,
+    # .vscode/mcp.json, .gemini/settings.json, .codex/config.toml) and MCP SDK imports in Python and
+    # JavaScript/TypeScript. Config text never leaves the runner; only facts are sent, once per scan.
+    # Default true, set explicitly. Off, the channel reports `disabled` and the platform treats the
+    # repository as not fully looked at; nothing is retired.
+    SCANNER_MCP_OBSERVATIONS_ENABLED: 'true'
     # Certificate/public-key pin detection (QP-355 D7/D13) — OkHttp, TrustKit,
     # Android network_security_config.xml, Python/Go/JS fingerprint checks and
     # HTTP Public-Key-Pins headers. Parity with the platform/UI scan path;
